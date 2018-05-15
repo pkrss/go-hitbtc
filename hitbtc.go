@@ -225,27 +225,6 @@ func (b *HitBtc) CancelOrder(currencyPair string) (orders []Order, err error) {
 	return
 }
 
-func (b *HitBtc) CancelOrderOne(orderId string) (order Order, err error) {
-	payload := make(map[string]string)
-	if orderId == "" {
-		err = errors.New("order id parameter is empty")
-		return
-	}
-	r, err := b.client.do("DELETE", "order/"+orderId, payload, true)
-	if err != nil {
-		return
-	}
-	var response interface{}
-	if err = json.Unmarshal(r, &response); err != nil {
-		return
-	}
-	if err = handleErr(response); err != nil {
-		return
-	}
-	err = json.Unmarshal(r, &order)
-	return
-}
-
 func (b *HitBtc) GetOrder(orderId string) (orders []Order, err error) {
 	payload := make(map[string]string)
 	payload["clientOrderId"] = orderId
@@ -318,6 +297,40 @@ func (b *HitBtc) PlaceOrder(requestOrder Order) (responseOrder Order, err error)
 		return
 	}
 	err = json.Unmarshal(r, &responseOrder)
+	return
+}
+
+// GetTransactions is used to retrieve your withdrawal and deposit history
+// "Start" and "end" are given in UNIX timestamp format in miliseconds and used to specify the date range for the data returned.
+func (b *HitBtc) GetTransactions(start uint64, end uint64, limit uint32) (transactions []Transaction, err error) {
+	payload := make(map[string]string)
+	if start > 0 {
+		payload["from"] = strconv.FormatUint(uint64(start), 10)
+	}
+	if end == 0 {
+		end = uint64(time.Now().Unix()) * 1000
+	}
+	if end > 0 {
+		payload["till"] = strconv.FormatUint(uint64(end), 10)
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	if limit > 0 {
+		payload["limit"] = strconv.FormatUint(uint64(limit), 10)
+	}
+	r, err := b.client.do("GET", "account/transactions", payload, true)
+	if err != nil {
+		return
+	}
+	var response interface{}
+	if err = json.Unmarshal(r, &response); err != nil {
+		return
+	}
+	if err = handleErr(response); err != nil {
+		return
+	}
+	err = json.Unmarshal(r, &transactions)
 	return
 }
 
